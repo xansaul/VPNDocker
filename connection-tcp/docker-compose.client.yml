@@ -1,0 +1,7 @@
+services:
+  cliente_laptop:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - SERVER_ADDR=${SERVER_ADDR}

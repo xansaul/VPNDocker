@@ -1,0 +1,14 @@
+[package]
+name = "connection-tcp"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "hub"
+path = "src/bin/hub.rs"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"
+
+[dependencies]

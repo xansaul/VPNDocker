@@ -1,0 +1,34 @@
+services:
+  hub:
+    build: 
+      context: .
+      dockerfile: Dockerfile.hub
+    ports:
+      - "7878:7878" 
+
+  cliente_local_1:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - SERVER_ADDR=hub:7878
+    depends_on:
+      - hub
+
+  cliente_local_2:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - SERVER_ADDR=hub:7878
+    depends_on:
+      - hub
+
+  cliente_local_3:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - SERVER_ADDR=hub:7878
+    depends_on:
+      - hub
