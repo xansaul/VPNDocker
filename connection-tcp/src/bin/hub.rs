@@ -39,7 +39,7 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap) {
 }
 
 fn main() {
-    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
+    let listener = TcpListener::bind("10.10.10.1:7878").unwrap();
     let clients: ClientMap = Arc::new(Mutex::new(HashMap::new()));
 
     println!("Hub iniciado en el puerto 7878...");
