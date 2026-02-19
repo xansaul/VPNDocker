@@ -3,11 +3,10 @@ use std::net::{TcpStream, SocketAddr};
 use std::thread;
 use std::time::Duration;
 use socket2::{Socket, Domain, Type, Protocol};
-use dotenvy::dotenv;
 use std::env;
 
 fn main() {
-    dotenv().ok();
+    
 
     let hub_addr_str = env::var("HUB_ADDR").unwrap_or_else(|_| "10.10.10.1:7878".to_string());
     let client_ip_str = env::var("CLIENT_IP").expect("CLIENT_IP no definida en el .env");
