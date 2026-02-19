@@ -14,7 +14,7 @@ Este proyecto Rust implementa una conexión TCP simple con una arquitectura Hub-
 Para levantar el nodo HUB en el servidor, ejecuta el siguiente comando en la raíz del proyecto:
 
 ```bash
-docker-compose -f docker-compose.hub.yml up --build
+sudo docker-compose -f docker-compose.hub.yml up -d --scale cliente_local=4
 ```
 
 Esto iniciará el servicio del HUB escuchando en el puerto configurado (por defecto 7878).
@@ -36,5 +36,5 @@ Para levantar el cliente, sigue estos pasos:
 3.  Ejecuta el siguiente comando para iniciar el cliente:
 
 ```bash
-docker-compose -f docker-compose.client.yml up --build
+sudo docker-compose -f docker-compose.client.yml up -d --scale cliente_local=4
 ```
