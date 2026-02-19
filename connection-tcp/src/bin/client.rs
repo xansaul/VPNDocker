@@ -25,7 +25,6 @@ fn main() {
     println!("Intentando conectar al Hub {} ...", hub_addr);
     println!("===============================");
 
-    // Intento de conexión con reintento infinito
     let mut stream = loop {
         match TcpStream::connect_timeout(&hub_addr, Duration::from_secs(5)) {
             Ok(s) => {
@@ -45,7 +44,6 @@ fn main() {
         }
     };
 
-    // Clonamos el stream para lectura en otro hilo
     let mut reader_stream = stream
         .try_clone()
         .expect("No se pudo clonar el stream");
@@ -60,7 +58,27 @@ fn main() {
                     break;
                 }
                 Ok(n) => {
-                    print!("\n[HUB]: {}", String::from_utf8_lossy(&buffer[..n]));
+                    let msg_str = String::from_utf8_lossy(&buffer[..n]).to_string();
+
+                    if msg_str.starts_with("SOLVE:") {
+                        let parts: Vec<&str> = msg_str.trim().split_whitespace().collect();
+                        if parts.len() >= 4 {
+                            if let (Ok(a), Ok(b)) = (parts[1].parse::<u16>(), parts[3].parse::<u16>()) {
+                                let sum = a + b;
+                                println!("\n[RETO RECIBIDO]: {} + {} = ?", a, b);
+                                let response = format!("RESULT: {}", sum);
+                                
+                                if let Err(e) = reader_stream.write_all(response.as_bytes()) {
+                                    println!("Error respondiendo reto: {}", e);
+                                } else {
+                                    println!("[RETO ENVIADO]: {}", sum);
+                                }
+                                continue; 
+                            }
+                        }
+                    }
+
+                    print!("\n[HUB]: {}", msg_str);
                     io::stdout().flush().unwrap();
                 }
                 Err(e) => {

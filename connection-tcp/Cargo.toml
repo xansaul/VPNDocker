@@ -14,3 +14,4 @@ path = "src/bin/client.rs"
 [dependencies]
 socket2 = { version = "0.5", features = ["all"] }
 dotenvy = "0.15"
+rand = "0.8"

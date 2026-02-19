@@ -3,12 +3,24 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use rand;
 
 type ClientMap = Arc<Mutex<HashMap<String, TcpStream>>>;
 
 fn handle_client(mut stream: TcpStream, clients: ClientMap) {
-    let addr = stream.peer_addr().unwrap().to_string();
+    let addr = stream.peer_addr().expect("No se pudo obtener la IP del cliente").to_string();
     println!("Nuevo cliente registrado: {}", addr);
+
+    let a = rand::random::<u8>() as u16; 
+    let b = rand::random::<u8>() as u16;
+    let challenge = format!("SOLVE: {} + {}", a, b);
+    
+    if let Err(e) = stream.write_all(challenge.as_bytes()) {
+        println!("Error enviando desafío a {}: {}", addr, e);
+        return;
+    }
+    
+    println!("Desafío enviado a {}: {}", addr, challenge);
 
     {
         let mut clients_guard = clients.lock().unwrap();
