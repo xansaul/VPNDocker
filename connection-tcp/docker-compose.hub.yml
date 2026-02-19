@@ -12,3 +12,4 @@ services:
     network_mode: "host"
     environment:
       - HUB_ADDR=10.10.10.1:7878
+      - CLIENT_IP=10.10.10.1
