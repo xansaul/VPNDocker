@@ -4,4 +4,5 @@ services:
       context: .
       dockerfile: Dockerfile.client
     environment:
-      - SERVER_ADDR=${SERVER_ADDR}
+      - HUB_ADDR=${HUB_ADDR}
+      - CLIENT_IP=${CLIENT_IP}
