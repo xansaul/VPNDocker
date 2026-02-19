@@ -16,6 +16,7 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap) {
     }
 
     let mut buffer = [0; 512];
+
     loop {
         match stream.read(&mut buffer) {
             Ok(0) => {
@@ -24,25 +25,39 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap) {
                 break;
             }
             Ok(n) => {
-                let msg = String::from_utf8_lossy(&buffer[..n]);
+                let msg = String::from_utf8_lossy(&buffer[..n]).to_string();
                 println!("Mensaje de {}: {}", addr, msg.trim());
-                
-                let clients_guard = clients.lock().unwrap();
-                for (id, mut c_stream) in clients_guard.iter() {
-                    let response = format!("Broadcast desde el Hub para {}: {}", id, msg);
-                    let _ = c_stream.write_all(response.as_bytes());
+
+                let mut clients_guard = clients.lock().unwrap();
+
+                for (id, client_stream) in clients_guard.iter_mut() {
+                    let response = format!(
+                        "Broadcast desde el Hub para {}: {}",
+                        id,
+                        msg
+                    );
+
+                    if let Err(e) = client_stream.write_all(response.as_bytes()) {
+                        println!("Error enviando a {}: {}", id, e);
+                    }
                 }
             }
-            Err(_) => break,
+            Err(e) => {
+                println!("Error con {}: {}", addr, e);
+                clients.lock().unwrap().remove(&addr);
+                break;
+            }
         }
     }
 }
 
 fn main() {
-    let listener = TcpListener::bind("10.10.10.1:7878").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:7878")
+        .expect("No se pudo iniciar el Hub");
+
     let clients: ClientMap = Arc::new(Mutex::new(HashMap::new()));
 
-    println!("Hub iniciado en el puerto 7878...");
+    println!("Hub iniciado en 0.0.0.0:7878...");
 
     for stream in listener.incoming() {
         match stream {
@@ -52,7 +67,7 @@ fn main() {
                     handle_client(stream, clients_clone);
                 });
             }
-            Err(e) => println!("Error: {}", e),
+            Err(e) => println!("Error aceptando conexión: {}", e),
         }
     }
 }
