@@ -25,40 +25,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         TcpSocket::new_v6()?
     };
 
+    socket.set_reuseaddr(true)?;
     socket.bind(SocketAddr::new(client_ip, 0))?; 
 
-    println!("Conectando desde la IP asignada: {}", client_ip);
-
     let mut stream = socket.connect(hub_addr).await?;
-    println!("Conexión establecida con el Hub {}", hub_addr_str);
+    let local_addr = stream.local_addr()?;
+    
+    println!("Conectado desde: {}", local_addr);
 
-    let mut buffer = vec![0u8; 10000];
+    let mut buffer = vec![0u8; 65536];
 
     loop {
         let n = stream.read(&mut buffer).await?;
         if n == 0 { 
-            println!("Conexión cerrada por el servidor.");
             break; 
         }
 
-        let msg: Message = serde_json::from_slice(&buffer[..n])?;
-        
-        match msg {
-            Message::AssignTask(task) => {
-                println!("[Tarea {}] Iniciando cálculo de Mandelbrot...", task.id);
-                let pixels = compute_mandelbrot(&task);
-                
-                let result = Message::SubmmitResult(TaskResult {
-                    task_id: task.id,
-                    worker_id: client_ip_str.clone(),
-                    pixels,
-                });
-                
-                let response = serde_json::to_vec(&result)?;
-                stream.write_all(&response).await?;
-                println!("[Tarea {}] Resultado enviado satisfactoriamente.", task.id);
-            },
-            _ => {}
+        if let Ok(msg) = serde_json::from_slice::<Message>(&buffer[..n]) {
+            match msg {
+                Message::AssignTask(task) => {
+                    let pixels = compute_mandelbrot(&task);
+                    
+                    let result = Message::SubmmitResult(TaskResult {
+                        task_id: task.id,
+                        worker_id: local_addr.to_string(),
+                        pixels,
+                    });
+                    
+                    let response = serde_json::to_vec(&result)?;
+                    stream.write_all(&response).await?;
+                },
+                _ => {}
+            }
         }
     }
     Ok(())
