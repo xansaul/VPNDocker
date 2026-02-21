@@ -12,6 +12,7 @@ name = "client"
 path = "src/bin/client.rs"
 
 [dependencies]
-socket2 = { version = "0.5", features = ["all"] }
-dotenvy = "0.15"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 rand = "0.8"

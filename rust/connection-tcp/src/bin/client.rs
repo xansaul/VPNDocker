@@ -1,122 +1,81 @@
-use std::io::{self, Read, Write};
-use std::net::{TcpStream, SocketAddr, IpAddr};
-use std::thread;
-use std::time::Duration;
+use tokio::net::TcpSocket;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::net::{IpAddr, SocketAddr};
 use std::env;
 
-fn main() {
-    
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hub_addr_str = env::var("HUB_ADDR")
         .unwrap_or_else(|_| "10.10.10.1:7878".to_string());
-
     let client_ip_str = env::var("CLIENT_IP")
         .unwrap_or_else(|_| "10.10.10.2".to_string());
 
-    let hub_addr: SocketAddr = hub_addr_str
-        .parse()
-        .expect("HUB_ADDR inválida. Formato esperado: IP:PUERTO");
+    let hub_addr: SocketAddr = hub_addr_str.parse()?;
+    let client_ip: IpAddr = client_ip_str.parse()?;
 
-    let client_ip: IpAddr = client_ip_str
-        .parse()
-        .expect("CLIENT_IP inválida");
-
-    println!("===============================");
-    println!("Identidad configurada: {}", client_ip);
-    println!("Intentando conectar al Hub {} ...", hub_addr);
-    println!("===============================");
-
-    let mut stream = loop {
-        match TcpStream::connect_timeout(&hub_addr, Duration::from_secs(5)) {
-            Ok(s) => {
-                let local = s.local_addr().expect("Error obteniendo IP local");
-
-                println!("Conectado exitosamente al Hub");
-                println!("IP local usada: {}", local.ip());
-                println!("Puerto local asignado: {}", local.port());
-                println!("===============================");
-
-                break s;
-            }
-            Err(e) => {
-                println!("No se pudo conectar: {}. Reintentando en 3s...", e);
-                thread::sleep(Duration::from_secs(3));
-            }
-        }
+    let socket = if client_ip.is_ipv4() {
+        TcpSocket::new_v4()?
+    } else {
+        TcpSocket::new_v6()?
     };
 
-    let mut reader_stream = stream
-        .try_clone()
-        .expect("No se pudo clonar el stream");
+    socket.bind(SocketAddr::new(client_ip, 0))?; 
 
-    let reader_handle = thread::spawn(move || {
-        let mut buffer = [0u8; 1024];
+    println!("Conectando desde la IP asignada: {}", client_ip);
 
-        loop {
-            match reader_stream.read(&mut buffer) {
-                Ok(0) => {
-                    println!("\nEl Hub cerró la conexión.");
-                    break;
-                }
-                Ok(n) => {
-                    let msg_str = String::from_utf8_lossy(&buffer[..n]).to_string();
+    let mut stream = socket.connect(hub_addr).await?;
+    println!("Conexión establecida con el Hub {}", hub_addr_str);
 
-                    if msg_str.starts_with("SOLVE:") {
-                        let parts: Vec<&str> = msg_str.trim().split_whitespace().collect();
-                        if parts.len() >= 4 {
-                            if let (Ok(a), Ok(b)) = (parts[1].parse::<u16>(), parts[3].parse::<u16>()) {
-                                let sum = a + b;
-                                println!("\n[RETO RECIBIDO]: {} + {} = ?", a, b);
-                                let response = format!("RESULT: {}", sum);
-                                
-                                if let Err(e) = reader_stream.write_all(response.as_bytes()) {
-                                    println!("Error respondiendo reto: {}", e);
-                                } else {
-                                    println!("[RETO ENVIADO]: {}", sum);
-                                }
-                                continue; 
-                            }
-                        }
-                    }
-
-                    print!("\n[HUB]: {}", msg_str);
-                    io::stdout().flush().unwrap();
-                }
-                Err(e) => {
-                    println!("\nError leyendo del Hub: {}", e);
-                    break;
-                }
-            }
-        }
-    });
-
-    println!("Escribe mensajes para enviar (exit para salir):");
+    let mut buffer = vec![0u8; 10000];
 
     loop {
-        let mut input = String::new();
-
-        if io::stdin().read_line(&mut input).is_err() {
-            println!("Error leyendo entrada.");
-            break;
+        let n = stream.read(&mut buffer).await?;
+        if n == 0 { 
+            println!("Conexión cerrada por el servidor.");
+            break; 
         }
 
-        let trimmed = input.trim();
-
-        if trimmed == "exit" {
-            println!("Cerrando conexión...");
-            break;
-        }
-
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        if let Err(e) = stream.write_all(input.as_bytes()) {
-            println!("Error enviando mensaje: {}", e);
-            break;
+        let msg: Message = serde_json::from_slice(&buffer[..n])?;
+        
+        match msg {
+            Message::AssignTask(task) => {
+                println!("[Tarea {}] Iniciando cálculo de Mandelbrot...", task.id);
+                let pixels = compute_mandelbrot(&task);
+                
+                let result = Message::SubmmitResult(TaskResult {
+                    task_id: task.id,
+                    worker_id: client_ip_str.clone(),
+                    pixels,
+                });
+                
+                let response = serde_json::to_vec(&result)?;
+                stream.write_all(&response).await?;
+                println!("[Tarea {}] Resultado enviado satisfactoriamente.", task.id);
+            },
+            _ => {}
         }
     }
+    Ok(())
+}
 
-    let _ = reader_handle.join();
-
-    println!("Cliente finalizado.");
+fn compute_mandelbrot(task: &MandelbrotTask) -> Vec<u32> {
+    let mut results = Vec::with_capacity(task.width * task.height);
+    for py in 0..task.height {
+        for px in 0..task.width {
+            let cx = task.x_start + (px as f64 / task.width as f64) * (task.x_end - task.x_start);
+            let cy = task.y_start + (py as f64 / task.height as f64) * (task.y_end - task.y_start);
+            
+            let mut x = 0.0;
+            let mut y = 0.0;
+            let mut i = 0;
+            while x*x + y*y <= 4.0 && i < task.max_iter {
+                let temp = x*x - y*y + cx;
+                y = 2.0*x*y + cy;
+                x = temp;
+                i += 1;
+            }
+            results.push(i);
+        }
+    }
+    results
 }
