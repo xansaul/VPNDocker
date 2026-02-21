@@ -1,21 +1,22 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use models::Message;
+// use std::collections::HashMap;
+// use std::sync::{Arc, Mutex};
+use connection_tcp::models::{Message, MandelbrotTask};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncWriteExt};
 
-type ClientMap = Arc<Mutex<HashMap<String, TcpStream>>>;
+// type ClientMap = Arc<Mutex<HashMap<String, TcpStream>>>;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("0.0.0.0:7878").await?;
+
     println!("Hub iniciado en la VPN (10.10.10.1) [cite: 20]");
 
     loop {
         let (socket, addr) = listener.accept().await?;
         println!("Nuevo worker conectado: {}", addr);
+
 
         tokio::spawn(async move {
             if let Err(e) = handle_worker(socket).await {

@@ -3,6 +3,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::net::{IpAddr, SocketAddr};
 use std::env;
 
+use connection_tcp::models::{
+    Message,
+    MandelbrotTask,
+    TaskResult,
+};
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hub_addr_str = env::var("HUB_ADDR")
