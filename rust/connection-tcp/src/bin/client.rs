@@ -66,7 +66,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     
                     let response = serde_json::to_vec(&result)?;
                     stream.write_all(&response).await?;
-                    println!("[Tarea {}] Resultado enviado desde {}", task.id, local_addr);
+                    stream.flush().await?;
+                    println!("[Tarea {}] Enviada correctamente.", task.id);
                 },
                 _ => {}
             }
