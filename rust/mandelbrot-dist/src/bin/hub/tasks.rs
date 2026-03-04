@@ -1,4 +1,4 @@
-use crate::models::MandelbrotTask;
+use mandelbrot_dist::models::MandelbrotTask;
 
 pub fn divide_into_chunks(
     job_id:       &str,

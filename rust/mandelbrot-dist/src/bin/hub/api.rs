@@ -4,7 +4,9 @@ use axum::{
 };
 use std::net::SocketAddr;
 use uuid::Uuid;
-use crate::models::{AppState, JobConfig, JobStatus, JobCreatedResponse, ListJobsResponse, JobSummary};
+
+use mandelbrot_dist::models::{AppState, JobConfig, JobStatus, JobCreatedResponse, ListJobsResponse, JobSummary, JobState};
+
 use crate::tasks::divide_into_chunks;
 
 pub async fn start_api(state: AppState, rest_port: &str) -> std::io::Result<()> {
@@ -41,7 +43,7 @@ async fn create_job(
 
     {
         let mut jobs = state.jobs.write().await;
-        jobs.insert(job_id.clone(), crate::models::JobState {
+        jobs.insert(job_id.clone(), JobState {
             config:       config.clone(),
             status:       JobStatus::Queued,
             chunks_total: num_chunks,

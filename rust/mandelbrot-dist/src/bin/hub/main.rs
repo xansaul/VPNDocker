@@ -1,13 +1,12 @@
-mod models;
 mod api;
 mod tasks;
 
+use mandelbrot_dist::models::{AppState, TaskResult};
 
 use std::env;
 use std::collections::{VecDeque, HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, RwLock};
-use models::{AppState, TaskResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
