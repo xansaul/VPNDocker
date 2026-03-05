@@ -7,6 +7,10 @@ edition = "2024"
 name = "hub"
 path = "src/bin/hub/main.rs"
 
+[[bin]]
+name = "client"
+path = "src/bin/client/client.rs"
+
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
