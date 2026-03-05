@@ -1,0 +1,9 @@
+services:
+  cliente_local:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    network_mode: "host"
+    environment:
+      - HUB_ADDR=${HUB_ADDR}
+      - CLIENT_IP=${CLIENT_IP}

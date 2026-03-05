@@ -1,0 +1,21 @@
+
+FROM rust:1.85-slim AS builder
+
+WORKDIR /usr/src/app
+COPY . .
+
+RUN cargo build --release --bin hub
+
+FROM debian:bookworm-slim
+WORKDIR /usr/local/bin
+
+# Instalamos herramientas básicas de red para pruebas (opcional)
+RUN apt-get update && apt-get install -y iputils-ping net-tools && rm -rf /var/lib/apt/lists/*
+
+# Copiamos solo el binario compilado desde la etapa anterior
+COPY --from=builder /usr/src/app/target/release/hub* .
+
+# Exponemos el puerto que definiste en el código
+EXPOSE 7878
+
+CMD ["./hub"]
