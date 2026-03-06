@@ -1,6 +1,9 @@
 use axum::{
     routing::{get, post},
-    Router, Json, extract::{State, Path}, http::StatusCode,
+    Router, 
+    Json, 
+    extract::{State, Path}, 
+    http::StatusCode,
 };
 use std::net::SocketAddr;
 use uuid::Uuid;
@@ -57,8 +60,8 @@ async fn create_job(
         for task in tasks { queue.push_back(task); }
     }
 
-    println!("[REST] Job creado: {} | {}x{} | {} chunks", job_id, config.img_width, config.img_height, num_chunks);
-
+    println!("[REST] Job creado: {} | {}x{} | {} chunks | max_iter {}",
+        job_id, config.img_width, config.img_height, num_chunks, config.max_iter);
     {
         let mut jobs = state.jobs.write().await;
         if let Some(job) = jobs.get_mut(&job_id) {
@@ -70,9 +73,7 @@ async fn create_job(
         StatusCode::CREATED,
         Json(JobCreatedResponse {
             job_id: job_id.clone(),
-            img_width:  config.img_width,
-            img_height: config.img_height,
-            max_iter:   config.max_iter,
+            message: format!("Job {} creada con {} chunks. Workers disponibles: {}", job_id, num_chunks, workers_count),
         }),
     )
 }

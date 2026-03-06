@@ -75,9 +75,7 @@ pub struct JobState {
 #[derive(Serialize)]
 pub struct JobCreatedResponse {
     pub job_id: String,
-    pub img_width:  usize,
-    pub img_height: usize,
-    pub max_iter:   u32,
+    pub message: String,
 }
 
 #[allow(dead_code)]
