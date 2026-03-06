@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile.hub
     network_mode: "host" 
+    volumes:
+      - ./output:/usr/local/bin/output
 
   cliente_local:
     build:

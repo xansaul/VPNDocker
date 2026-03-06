@@ -12,16 +12,20 @@ use mandelbrot_dist::models::{AppState, JobConfig, JobStatus, JobCreatedResponse
 
 use crate::tasks::divide_into_chunks;
 
+use tower_http::services::ServeDir;
+
 pub async fn start_api(state: AppState, rest_port: &str) -> std::io::Result<()> {
     let app = Router::new()
         .route("/health",      get(|| async { "OK" }))
         .route("/jobs",        post(create_job))
         .route("/jobs",        get(list_jobs))
         .route("/jobs/:id",    get(get_job_status))
+        .nest_service("/images", ServeDir::new("output"))
         .with_state(state);
 
     let rest_addr: SocketAddr = format!("0.0.0.0:{}", rest_port).parse().unwrap();
     println!("[REST] Escuchando en http://{}", rest_addr);
+    println!("[REST] Imágenes disponibles en http://{}/images", rest_addr);
     
     let listener = tokio::net::TcpListener::bind(rest_addr).await?;
     axum::serve(listener, app).await
