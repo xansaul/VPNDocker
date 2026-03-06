@@ -1,4 +1,4 @@
-use mandelbrot_dist::models::{MandelbrotTask, TaskResult, JobState, JobStatus};
+use mandelbrot_dist::models::{MandelbrotTask, TaskResult, JobState, JobStatus, JobConfig};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
@@ -6,30 +6,28 @@ use tokio::sync::{mpsc, RwLock};
 
 pub fn divide_into_chunks(
     job_id:       &str,
-    total_width:  usize,
-    total_height: usize,
-    max_iter:     u32,
+    config:       &JobConfig,
     num_chunks:   usize,
 ) -> Vec<MandelbrotTask> {
-    let rows_per_chunk = total_height / num_chunks;
+    let rows_per_chunk = config.img_height / num_chunks;
     let mut tasks = Vec::with_capacity(num_chunks);
 
     for i in 0..num_chunks {
         let row_start = i * rows_per_chunk;
-        let row_end   = if i == num_chunks - 1 { total_height } else { (i + 1) * rows_per_chunk };
+        let row_end   = if i == num_chunks - 1 { config.img_height } else { (i + 1) * rows_per_chunk };
 
         tasks.push(MandelbrotTask {
             id:           i as u32,
             job_id:       job_id.to_string(),
-            x_start:     -2.5,
-            x_end:        1.0,
-            y_start:     -1.2,
-            y_end:        1.2,
+            x_start:      config.x_start,
+            x_end:        config.x_end,
+            y_start:      config.y_start,
+            y_end:        config.y_end,
             row_start,
             row_end,
-            total_width,
-            total_height,
-            max_iter,
+            total_width:  config.img_width,
+            total_height: config.img_height,
+            max_iter:     config.max_iter,
         });
     }
     tasks

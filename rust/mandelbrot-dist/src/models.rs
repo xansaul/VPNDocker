@@ -10,6 +10,10 @@ pub struct JobConfig {
     pub img_width:    usize,
     pub img_height:   usize,
     pub max_iter:     u32,
+    pub x_start:      f64,
+    pub x_end:        f64,
+    pub y_start:      f64,
+    pub y_end:        f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -97,4 +101,8 @@ pub struct JobSummary {
     pub img_width:  usize,
     pub img_height: usize,
     pub max_iter:   u32,
+    pub x_start:    f64,
+    pub x_end:      f64,
+    pub y_start:    f64,
+    pub y_end:      f64,
 }

@@ -46,7 +46,7 @@ async fn create_job(
     };
 
     let num_chunks = workers_count * 4;
-    let tasks = divide_into_chunks(&job_id, config.img_width, config.img_height, config.max_iter, num_chunks);
+    let tasks = divide_into_chunks(&job_id, &config, num_chunks);
 
     {
         let mut jobs = state.jobs.write().await;
@@ -98,6 +98,10 @@ async fn get_job_status(
                 "img_width":    job.config.img_width,
                 "img_height":   job.config.img_height,
                 "max_iter":     job.config.max_iter,
+                "x_start":      job.config.x_start,
+                "x_end":        job.config.x_end,
+                "y_start":      job.config.y_start,
+                "y_end":        job.config.y_end,
             })),
         ),
         None => (
@@ -115,6 +119,10 @@ async fn list_jobs(State(state): State<AppState>) -> Json<ListJobsResponse> {
         img_width:  job.config.img_width,
         img_height: job.config.img_height,
         max_iter:   job.config.max_iter,
+        x_start:    job.config.x_start,
+        x_end:      job.config.x_end,
+        y_start:    job.config.y_start,
+        y_end:      job.config.y_end,
     }).collect();
 
     Json(ListJobsResponse { jobs: list })
