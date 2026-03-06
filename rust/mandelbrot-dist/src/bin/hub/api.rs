@@ -58,7 +58,7 @@ async fn image_gallery() -> Html<String> {
                             <a href=\"{img_url}\" target=\"_blank\">
                                 <img src=\"{img_url}\" alt=\"{filename}\" loading=\"lazy\" />
                             </a>
-                            <a href=\"{img_url}\" target=\"_blank\">🔍 Ver Tamaño Completo<br><small>{filename}</small></a>
+                            <a href=\"{img_url}\" target=\"_blank\">Ver Tamaño Completo<br><small>{filename}</small></a>
                         </div>",
                         img_url = img_url,
                         filename = filename
