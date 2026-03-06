@@ -35,7 +35,7 @@ pub fn divide_into_chunks(
 pub fn calculate_timeout(task: &MandelbrotTask) -> u64 {
     let pixels  = (task.row_end - task.row_start) * task.total_width;
     let estimate = (pixels as u64 * task.max_iter as u64) / 10_000_000;
-    estimate.clamp(30, 600)
+    estimate.clamp(30, 7200)
 }
 
 pub async fn result_collector(
