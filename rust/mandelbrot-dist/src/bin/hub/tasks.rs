@@ -9,8 +9,15 @@ pub fn divide_into_chunks(
     config:       &JobConfig,
     num_chunks:   usize,
 ) -> Vec<MandelbrotTask> {
+    let x_start = config.x_start;
+    let y_start = config.y_start;
+    let total_width = config.img_width;
+
     let rows_per_chunk = config.img_height / num_chunks;
     let mut tasks = Vec::with_capacity(num_chunks);
+
+    let x_step = (config.x_end - x_start) / total_width as f64;
+    let y_step = (config.y_end - y_start) / config.total_height as f64;
 
     for i in 0..num_chunks {
         let row_start = i * rows_per_chunk;
@@ -19,14 +26,13 @@ pub fn divide_into_chunks(
         tasks.push(MandelbrotTask {
             id:           i as u32,
             job_id:       job_id.to_string(),
-            x_start:      config.x_start,
-            x_end:        config.x_end,
-            y_start:      config.y_start,
-            y_end:        config.y_end,
+            x_start,
+            x_step,        
+            y_start,
+            y_step,        
             row_start,
             row_end,
-            total_width:  config.img_width,
-            total_height: config.img_height,
+            total_width,
             max_iter:     config.max_iter,
         });
     }
@@ -41,7 +47,6 @@ pub fn calculate_timeout(task: &MandelbrotTask) -> u64 {
 pub async fn result_collector(
     mut result_rx:     mpsc::Receiver<TaskResult>,
     jobs:              Arc<RwLock<HashMap<String, JobState>>>,
-    _num_chunks_factor: usize,
 ) {
     println!("[Colector] Iniciado, esperando resultados...");
 

@@ -86,7 +86,7 @@ async fn handle_task_async(
         worker_id, task.id, start.elapsed().as_secs_f64(), pixels.len()
     );
 
-    let result = Message::SubmmitResult(TaskResult {
+    let result = Message::SubmitResult(TaskResult {
         task_id:   task.id,
         job_id:    task.job_id.clone(),
         worker_id: worker_id.to_string(),
@@ -104,12 +104,14 @@ async fn handle_task_async(
 
 fn compute_mandelbrot(task: &MandelbrotTask) -> Vec<u32> {
     let mut results = Vec::with_capacity((task.row_end - task.row_start) * task.total_width);
+    let cx = task.x_start;
+    let cy = task.y_start;
     for py in task.row_start..task.row_end {
         for px in 0..task.total_width {
-            let cx = task.x_start + (px as f64 / task.total_width  as f64) * (task.x_end - task.x_start);
-            let cy = task.y_start + (py as f64 / task.total_height as f64) * (task.y_end - task.y_start);
             results.push(mandelbrot_iter(cx, cy, task.max_iter));
+            cx += task.x_step;
         }
+        cy += task.y_step;
     }
     results
 }
