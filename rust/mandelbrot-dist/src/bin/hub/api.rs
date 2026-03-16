@@ -20,7 +20,7 @@ pub async fn start_api(state: AppState, rest_port: &str) -> std::io::Result<()> 
         .nest_service("/images", ServeDir::new("output"))
         .with_state(state);
 
-    let rest_addr: SocketAddr = format!("0.0.0.0:{}", rest_port).parse().unwrap();
+    let rest_addr: SocketAddr = format!("10.10.10.1:{}", rest_port).parse().unwrap();
     println!("[REST] Escuchando en http://{}", rest_addr);
     println!("[REST] Imágenes disponibles en http://{}/images", rest_addr);
     

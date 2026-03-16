@@ -17,7 +17,7 @@ pub fn divide_into_chunks(
     let mut tasks = Vec::with_capacity(num_chunks);
 
     let x_step = (config.x_end - x_start) / total_width as f64;
-    let y_step = (config.y_end - y_start) / config.total_height as f64;
+    let y_step = (config.y_end - y_start) / config.img_height as f64;
 
     for i in 0..num_chunks {
         let row_start = i * rows_per_chunk;

@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("[Tarea {}] Calculando Mandelbrot...", task.id);
                     let pixels = compute_mandelbrot(&task);
                     
-                    let result = Message::SubmmitResult(TaskResult {
+                    let result = Message::SubmitResult(TaskResult {
                         task_id: task.id,
                         worker_id: local_addr.to_string(),
                         pixels,

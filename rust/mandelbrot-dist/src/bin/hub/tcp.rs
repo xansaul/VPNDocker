@@ -103,7 +103,7 @@ async fn handle_worker(
                     }
                     full_data.extend_from_slice(&buffer[..n]);
 
-                    if let Ok(Message::SubmmitResult(r)) = serde_json::from_slice::<Message>(&full_data) {
+                    if let Ok(Message::SubmitResult(r)) = serde_json::from_slice::<Message>(&full_data) {
                         return Ok(r);
                     }
                 }

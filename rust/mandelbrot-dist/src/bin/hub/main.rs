@@ -14,15 +14,14 @@ use crate::tasks::result_collector;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rest_port = env::var("REST_PORT").unwrap_or("8080".into());
     let tcp_port  = env::var("TCP_PORT").unwrap_or("7878".into());
-    let num_chunks_factor: usize = env::var("CHUNKS_FACTOR").unwrap_or("4".into()).parse()?;
 
 
 
     println!("╔══════════════════════════════════════════╗");
     println!("║       Hub Mandelbrot — REST + TCP        ║");
     println!("║══════════════════════════════════════════║\n");
-    println!("║  TCP workers   : 0.0.0.0:{}", tcp_port);
-    println!("║  REST API      : 0.0.0.0:{}", rest_port);
+    println!("║  TCP workers   : 10.10.10.1:{}", tcp_port);
+    println!("║  REST API      : 10.10.10.1:{}", rest_port);
     println!("╚══════════════════════════════════════════╝\n");
 
 
@@ -37,14 +36,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let jobs_map = Arc::clone(&state.jobs);
-        tokio::spawn(result_collector(result_rx, jobs_map, num_chunks_factor));
+        tokio::spawn(result_collector(result_rx, jobs_map));
     }
 
     {
         let pending = Arc::clone(&state.pending_tasks);
         let tx      = state.result_tx.clone();
         let workers = Arc::clone(&state.workers);
-        let addr    = format!("0.0.0.0:{}", tcp_port);
+        let addr    = format!("10.10.10.1:{}", tcp_port);
         tokio::spawn(async move {
             tcp::tcp_accept_loop(addr, pending, tx, workers).await;
         });
