@@ -6,6 +6,23 @@ services:
     network_mode: "host" 
     volumes:
       - ./output:/usr/local/bin/output
+    
+    restart: unless-stopped
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'     
+          memory: 512M    
+        reservations:
+          cpus: '0.25'    
+          memory: 128M
+          
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   
+        max-file: "3"      
 
   cliente_local:
     build:
@@ -15,3 +32,19 @@ services:
     environment:
       - HUB_ADDR=10.10.10.1:7878
       - CLIENT_IP=10.10.10.1
+
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G      
+        reservations:
+          cpus: '1.0'
+          memory: 256M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
