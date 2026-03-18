@@ -57,68 +57,68 @@ pub async fn result_collector(
 
         let mut jobs_lock = jobs.write().await;
         if let Some(job) = jobs_lock.get_mut(&job_id) {
-            if task_id < job.results.len() {
+            
+            if job.results[task_id].is_none() {
                 job.results[task_id] = Some(result);
-            }
-            job.chunks_done += 1;
+                job.chunks_done += 1;
 
-            println!(
-                "[Colector] Chunk {}/{} del job {} (worker: {})",
-                job.chunks_done, job.chunks_total, &job_id[..8], worker_id
-            );
+                println!(
+                    "[Colector] Chunk {}/{} del job {} recibido (Worker: {})",
+                    job.chunks_done, job.chunks_total, &job_id[..8], worker_id
+                );
 
-            if job.chunks_done == job.chunks_total {
-                let output_path = format!("output/{}.png", job_id);
-                let results: Vec<TaskResult> = job.results
-                    .iter()
-                    .flatten()
-                    .cloned()
-                    .collect();
+                if job.chunks_done == job.chunks_total {
+                    let output_path = format!("output/{}.png", job_id);
+                    let results: Vec<TaskResult> = job.results
+                        .iter()
+                        .flatten()
+                        .cloned()
+                        .collect();
 
-                let width     = job.config.img_width;
-                let height    = job.config.img_height;
-                let max_iter  = job.config.max_iter;
-                let out_path  = output_path.clone();
-                let job_id_c  = job_id.clone();
-                let jobs_ref  = Arc::clone(&jobs);
+                    let width     = job.config.img_width;
+                    let height    = job.config.img_height;
+                    let max_iter  = job.config.max_iter;
+                    let out_path  = output_path.clone();
+                    let job_id_c  = job_id.clone();
+                    let jobs_ref  = Arc::clone(&jobs);
 
-                drop(jobs_lock);
+                    drop(jobs_lock);
 
-                tokio::spawn(async move {
-                    println!("[Colector] Ensamblando imagen para job {}...", &job_id_c[..8]);
-                    let result = tokio::task::spawn_blocking(move || {
-                        assemble_and_save(&results, width, height, max_iter, &out_path)
-                    }).await;
+                    tokio::spawn(async move {
+                        println!("[Colector] Ensamblando imagen final para {}...", &job_id_c[..8]);
+                        let result = tokio::task::spawn_blocking(move || {
+                            assemble_and_save(&results, width, height, max_iter, &out_path)
+                        }).await;
 
-                    let mut jobs_lock = jobs_ref.write().await;
-                    if let Some(job) = jobs_lock.get_mut(&job_id_c) {
-                        match result {
-                            Ok(Ok(())) => {
-                                println!("[Colector] Imagen guardada: {}", output_path);
-                                job.status = JobStatus::Done { output_path };
-                            }
-                            Ok(Err(e)) => {
-                                eprintln!("[Colector] Error ensamblando imagen: {}", e);
-                                job.status = JobStatus::Failed { reason: e.to_string() };
-                            }
-                            Err(e) => {
-                                eprintln!("[Colector] Thread de ensamblado falló: {}", e);
-                                job.status = JobStatus::Failed { reason: e.to_string() };
+                        let mut jobs_lock = jobs_ref.write().await;
+                        if let Some(job) = jobs_lock.get_mut(&job_id_c) {
+                            match result {
+                                Ok(Ok(())) => {
+                                    println!("[Colector] ¡Imagen completada con éxito!: {}", output_path);
+                                    job.status = JobStatus::Done { output_path };
+                                }
+                                Ok(Err(e)) => {
+                                    job.status = JobStatus::Failed { reason: e.to_string() };
+                                }
+                                Err(e) => {
+                                    job.status = JobStatus::Failed { reason: e.to_string() };
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                } else {
+                    job.status = JobStatus::Running {
+                        chunks_done:  job.chunks_done,
+                        chunks_total: job.chunks_total,
+                    };
+                }
             } else {
-                job.status = JobStatus::Running {
-                    chunks_done:  job.chunks_done,
-                    chunks_total: job.chunks_total,
-                };
+                println!("[Colector] Ignorando resultado duplicado de tarea {} (Job: {})", task_id, &job_id[..8]);
             }
-        } else {
-            eprintln!("[Colector] Job {} no encontrado al recibir chunk {}", job_id, task_id);
         }
     }
 }
+
 
 fn assemble_and_save(
     results:  &[TaskResult],

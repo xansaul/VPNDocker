@@ -20,8 +20,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╔══════════════════════════════════════════╗");
     println!("║       Hub Mandelbrot — REST + TCP        ║");
     println!("║══════════════════════════════════════════║\n");
-    println!("║  TCP workers   : 10.10.10.1:{}", tcp_port);
-    println!("║  REST API      : 10.10.10.1:{}", rest_port);
+    println!("║  TCP workers   : 0.0.0.0:{}", tcp_port);
+    println!("║  REST API      : 0.0.0.0:{}", rest_port);
     println!("╚══════════════════════════════════════════╝\n");
 
 
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let pending = Arc::clone(&state.pending_tasks);
         let tx      = state.result_tx.clone();
         let workers = Arc::clone(&state.workers);
-        let addr    = format!("10.10.10.1:{}", tcp_port);
+        let addr    = format!("0.0.0.0:{}", tcp_port);
         tokio::spawn(async move {
             tcp::tcp_accept_loop(addr, pending, tx, workers).await;
         });

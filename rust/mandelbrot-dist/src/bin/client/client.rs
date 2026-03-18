@@ -7,7 +7,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let hub_addr_str  = env::var("HUB_ADDR").unwrap_or("127.0.0.1:7878".into());
+    let hub_addr_str = env::var("HUB_ADDR").unwrap_or("127.0.0.1:7878".into());
     let client_ip: Option<IpAddr> = env::var("CLIENT_IP")
         .ok()
         .and_then(|s| s.parse().ok());
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╚══════════════════════════════════════════╝\n");
 
     let mut stream = connect_with_retry(&hub_addr_str, client_ip).await?;
-    let local_addr  = stream.local_addr()?;
+    let local_addr = stream.local_addr()?;
     println!("[Worker {}] Conectado al hub.\n", local_addr);
 
     let mut full_data: Vec<u8> = Vec::new();
@@ -32,33 +32,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("[Worker {}] Hub cerró la conexión.", local_addr);
             break;
         }
+        
         full_data.extend_from_slice(&buffer[..n]);
 
-        match serde_json::from_slice::<Message>(&full_data) {
-            Ok(msg) => {
-                full_data.clear();
-                match msg {
-                    Message::AssignTask(task) => {
-                        handle_task_async(&mut stream, task, &local_addr.to_string()).await?;
+        let mut cursor = 0;
+        loop {
+            let slice = &full_data[cursor..];
+            if slice.is_empty() { break; }
+
+            let mut stream_deser = serde_json::Deserializer::from_slice(slice).into_iter::<Message>();
+
+            match stream_deser.next() {
+                Some(Ok(msg)) => {
+                    cursor += stream_deser.byte_offset();
+                    
+                    match msg {
+                        Message::AssignTask(task) => {
+                            if let Err(e) = handle_task_async(&mut stream, task, &local_addr.to_string()).await {
+                                eprintln!("[Worker {}] Error procesando tarea: {}", local_addr, e);
+                                return Err(e); 
+                            }
+                        }
+                        Message::Error(e) => {
+                            eprintln!("[Worker {}] Error crítico del hub: {}", local_addr, e);
+                            break;
+                        }
+                        _ => {}
                     }
-                    Message::Error(e) => {
-                        eprintln!("[Worker {}] Error del hub: {}", local_addr, e);
-                        break;
-                    }
-                    _ => {}
                 }
-            }
-            Err(e) if e.is_eof() => continue,
-            Err(e) => {
-                eprintln!("[Worker {}] Error deserializando: {}", local_addr, e);
-                full_data.clear();
+                Some(Err(e)) if e.is_eof() => {
+                    break;
+                }
+                Some(Err(e)) => {
+                    eprintln!("[Worker {}] Error de formato: {}. Saltando...", local_addr, e);
+                    cursor += 1; 
+                }
+                None => break,
             }
         }
+        
+        full_data.drain(..cursor);
     }
 
-    println!("[Worker {}] Terminando.", local_addr);
+    println!("[Worker {}] Terminando proceso.", local_addr);
     Ok(())
 }
+
 
 async fn handle_task_async(
     stream:    &mut TcpStream,

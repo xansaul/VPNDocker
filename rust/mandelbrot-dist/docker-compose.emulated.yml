@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  hub:
+    build: 
+      context: .
+      dockerfile: Dockerfile.hub
+    container_name: hub
+    ports:
+      - "8080:8080"
+      - "7878:7878"
+    networks:
+      - distnet
+    volumes:
+      - ./output:/usr/local/bin/output
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'     
+          memory: 512M    
+        reservations:
+          cpus: '0.25'    
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   
+        max-file: "3" 
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    networks:
+      - distnet
+    environment:
+      - HUB_ADDR=hub:7878
+
+      - CLIENT_IP=0.0.0.0
+    restart: on-failure
+    depends_on:
+      - hub
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G      
+        reservations:
+          cpus: '1.0'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  distnet:
+
+    external: true
