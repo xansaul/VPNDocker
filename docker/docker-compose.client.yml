@@ -7,3 +7,12 @@ services:
     environment:
       - HUB_ADDR=${HUB_ADDR}
       - CLIENT_IP=${CLIENT_IP}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G      
+        reservations:
+          cpus: '1.0'
+          memory: 256M
