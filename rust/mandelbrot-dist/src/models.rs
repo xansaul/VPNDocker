@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, RwLock};
+use std::time::Instant;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JobConfig {
@@ -81,6 +82,7 @@ pub struct JobState {
     pub chunks_done: usize,
     #[allow(dead_code)]
     pub results: Vec<Option<TaskResult>>,
+    pub start_time: Instant,
 }
 
 #[derive(Serialize)]
