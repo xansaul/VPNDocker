@@ -81,6 +81,7 @@ pub async fn result_collector(
                     let out_path  = output_path.clone();
                     let job_id_c  = job_id.clone();
                     let jobs_ref  = Arc::clone(&jobs);
+                    let start_time  = job.start_time;
 
                     drop(jobs_lock);
 
@@ -94,8 +95,14 @@ pub async fn result_collector(
                         if let Some(job) = jobs_lock.get_mut(&job_id_c) {
                             match result {
                                 Ok(Ok(())) => {
-                                    println!("[Colector] ¡Imagen completada con éxito!: {}", output_path);
+                                    let elapsed_secs = start_time.elapsed().as_secs_f64();
+                                    
+                                    println!(
+                                        "[Colector] ¡Imagen completada con éxito!: {} en {:.2}s", 
+                                        output_path, elapsed_secs
+                                    );
                                     job.status = JobStatus::Done { output_path };
+
                                 }
                                 Ok(Err(e)) => {
                                     job.status = JobStatus::Failed { reason: e.to_string() };

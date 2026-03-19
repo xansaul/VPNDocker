@@ -100,6 +100,7 @@ async fn create_job(
             chunks_total: num_chunks,
             chunks_done:  0,
             results:      (0..num_chunks).map(|_| None).collect(),
+            start_time:   std::time::Instant::now(),
         });
     }
 
