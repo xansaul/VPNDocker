@@ -24,6 +24,6 @@ pub struct TaskResult {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Message {
     AssignTask(MandelbrotTask),
-    SubmmitResult(TaskResult),
+    SubmitResult(TaskResult),
     Error(String),
 }

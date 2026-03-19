@@ -8,12 +8,7 @@ RUN cargo build --release --bin client
 FROM debian:bookworm-slim
 WORKDIR /usr/local/bin
 
-RUN apt-get update && apt-get install -y \
-    iputils-ping \
-    netcat-openbsd \
-    iproute2 \
-    net-tools \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/app/target/release/client .
 

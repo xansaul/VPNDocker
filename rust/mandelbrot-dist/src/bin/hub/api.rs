@@ -1,9 +1,5 @@
 use axum::{
-    routing::{get, post},
-    Router, 
-    Json, 
-    extract::{State, Path}, 
-    http::StatusCode,
+    Json, Router, extract::{Path, State}, http::StatusCode, response::Html, routing::{get, post}
 };
 use std::net::SocketAddr;
 use uuid::Uuid;
@@ -19,6 +15,7 @@ pub async fn start_api(state: AppState, rest_port: &str) -> std::io::Result<()> 
         .route("/health",      get(|| async { "OK" }))
         .route("/jobs",        post(create_job))
         .route("/jobs",        get(list_jobs))
+        .route("/gallery",     get(image_gallery))
         .route("/jobs/:id",    get(get_job_status))
         .nest_service("/images", ServeDir::new("output"))
         .with_state(state);
@@ -30,6 +27,53 @@ pub async fn start_api(state: AppState, rest_port: &str) -> std::io::Result<()> 
     let listener = tokio::net::TcpListener::bind(rest_addr).await?;
     axum::serve(listener, app).await
 }
+
+
+async fn image_gallery() -> Html<String> {
+    let mut html = String::from("<html><head><title>Galería Mandelbrot</title><meta charset=\"UTF-8\">");
+
+    html.push_str("<style>
+        body { font-family: system-ui, sans-serif; background: #121212; color: #ffffff; padding: 2rem; }
+        h1 { text-align: center; margin-bottom: 2rem; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .card img { max-width: 100%; height: auto; border-radius: 8px; transition: transform 0.2s; }
+        .card img:hover { transform: scale(1.05); }
+        .card a { color: #64b5f6; text-decoration: none; font-size: 0.9em; display: block; margin-top: 10px; word-break: break-all; }
+    </style></head><body>");
+    
+    html.push_str("<h1>Galería de Fractales Generados</h1>");
+    html.push_str("<div class=\"gallery\">");
+
+
+    if let Ok(entries) = std::fs::read_dir("output") {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |e| e == "png") {
+                if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                    let img_url = format!("/images/{}", filename);
+                    
+                    html.push_str(&format!(
+                        "<div class=\"card\">
+                            <a href=\"{img_url}\" target=\"_blank\">
+                                <img src=\"{img_url}\" alt=\"{filename}\" loading=\"lazy\" />
+                            </a>
+                            <a href=\"{img_url}\" target=\"_blank\">Ver Tamaño Completo<br><small>{filename}</small></a>
+                        </div>",
+                        img_url = img_url,
+                        filename = filename
+                    ));
+                }
+            }
+        }
+    } else {
+        html.push_str("<p style='text-align: center; grid-column: 1 / -1;'>No hay imágenes generadas todavía. ¡Lanza algunos workers!</p>");
+    }
+
+    html.push_str("</div></body></html>");
+    Html(html)
+}
+
 
 async fn create_job(
     State(state): State<AppState>,
@@ -46,7 +90,7 @@ async fn create_job(
     };
 
     let num_chunks = workers_count * 4;
-    let tasks = divide_into_chunks(&job_id, config.img_width, config.img_height, config.max_iter, num_chunks);
+    let tasks = divide_into_chunks(&job_id, &config, num_chunks);
 
     {
         let mut jobs = state.jobs.write().await;
@@ -56,6 +100,7 @@ async fn create_job(
             chunks_total: num_chunks,
             chunks_done:  0,
             results:      (0..num_chunks).map(|_| None).collect(),
+            start_time:   std::time::Instant::now(),
         });
     }
 
@@ -98,6 +143,10 @@ async fn get_job_status(
                 "img_width":    job.config.img_width,
                 "img_height":   job.config.img_height,
                 "max_iter":     job.config.max_iter,
+                "x_start":      job.config.x_start,
+                "x_end":        job.config.x_end,
+                "y_start":      job.config.y_start,
+                "y_end":        job.config.y_end,
             })),
         ),
         None => (
@@ -115,6 +164,10 @@ async fn list_jobs(State(state): State<AppState>) -> Json<ListJobsResponse> {
         img_width:  job.config.img_width,
         img_height: job.config.img_height,
         max_iter:   job.config.max_iter,
+        x_start:    job.config.x_start,
+        x_end:      job.config.x_end,
+        y_start:    job.config.y_start,
+        y_end:      job.config.y_end,
     }).collect();
 
     Json(ListJobsResponse { jobs: list })

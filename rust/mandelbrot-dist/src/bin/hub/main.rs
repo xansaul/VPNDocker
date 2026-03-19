@@ -14,7 +14,6 @@ use crate::tasks::result_collector;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rest_port = env::var("REST_PORT").unwrap_or("8080".into());
     let tcp_port  = env::var("TCP_PORT").unwrap_or("7878".into());
-    let num_chunks_factor: usize = env::var("CHUNKS_FACTOR").unwrap_or("4".into()).parse()?;
 
 
 
@@ -37,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let jobs_map = Arc::clone(&state.jobs);
-        tokio::spawn(result_collector(result_rx, jobs_map, num_chunks_factor));
+        tokio::spawn(result_collector(result_rx, jobs_map));
     }
 
     {

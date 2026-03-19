@@ -45,7 +45,7 @@ ping 10.10.10.1  # Desde un cliente al Hub
 En la máquina que actuará como servidor:
 
 ```bash
-docker-compose -f docker/docker-compose.hub.yml up --build
+docker-compose -f docker/docker-compose.hub.yml up -d --scale cliente_local=4
 ```
 
 Esto iniciará el servicio `hub` escuchando en el puerto `7878` sobre la red del host (accesible vía VPN IP `10.10.10.1`).
@@ -58,7 +58,7 @@ En las máquinas cliente:
 
 ```bash
 # Puede configurar la IP del HUB si es diferente por defecto usando variables de entorno o editando el docker-compose
-docker-compose -f docker/docker-compose.client.yml up --build
+docker-compose -f docker/docker-compose.client.yml up -d --scale cliente_local=4
 ```
 
 El cliente intentará conectar a `HUB_ADDR` (definido en el docker-compose, por defecto `10.10.10.1:7878`).
@@ -89,3 +89,4 @@ Si prefiere ejecutar los binarios directamente sin Docker:
 -   **Red Host**: Los archivos `docker-compose` utilizan `network_mode: "host"`. Esto es ideal en Linux para que los contenedores usen directamente la interfaz WireGuard (`wg0`) del host. En Windows/Mac, Docker Desktop tiene aislamiento de red, por lo que podría requerir configuración adicional de puertos o no funcionar exactamente igual con `host` mode.
 -   **Firewall**: Asegúrese de que el puerto `51820/udp` (WireGuard) y `7878/tcp` (Aplicación) estén permitidos en el firewall de los nodos.
 -   **Configuración**: Las claves privadas en los archivos `wg0.conf` deben ser manejadas con seguridad. Los archivos provistos pueden contener claves de ejemplo o placeholders.
+-   **Emulación**: Para emular múltiples nodos en una sola máquina, se puede usar `docker-compose -f docker/docker-compose.emulated.yml up -d --scale cliente_local=4`.

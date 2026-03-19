@@ -70,7 +70,7 @@ async fn handle_worker(
             Err(e) => {
                 eprintln!("[Worker {}] Error serializando tarea: {}", addr, e);
                 pending.lock().await.push_back(task);
-                break;
+                continue; 
             }
         };
 
@@ -82,7 +82,7 @@ async fn handle_worker(
         if send_ok.is_err() || send_ok.unwrap().is_err() {
             eprintln!("[Worker {}] Error enviando tarea {}. Regresando a cola.", addr, task_id);
             pending.lock().await.push_back(task);
-            break;
+            break; 
         }
 
         println!("[Worker {}] -> Tarea {} enviada (job {})", addr, task_id, &job_id[..8]);
@@ -103,7 +103,7 @@ async fn handle_worker(
                     }
                     full_data.extend_from_slice(&buffer[..n]);
 
-                    if let Ok(Message::SubmmitResult(r)) = serde_json::from_slice::<Message>(&full_data) {
+                    if let Ok(Message::SubmitResult(r)) = serde_json::from_slice::<Message>(&full_data) {
                         return Ok(r);
                     }
                 }
@@ -116,23 +116,21 @@ async fn handle_worker(
                 let _ = result_tx.send(task_result).await;
             }
             Ok(Err(e)) => {
-                eprintln!("[Worker {}] Error recibiendo tarea {}: {}. Regresando a cola.", addr, task_id, e);
+                eprintln!("[Worker {}] Fallo en conexión/lectura tarea {}: {}.", addr, task_id, e);
                 pending.lock().await.push_back(task);
-                break;
+                break; 
             }
             Err(_) => {
                 eprintln!("[Worker {}] Timeout tarea {}. Regresando a cola.", addr, task_id);
                 pending.lock().await.push_back(task);
-                break;
+                continue; 
             }
         }
     }
-
-    println!("[Worker {}] Handler terminado.", addr);
-
+    
     {
         let mut w = workers.write().await;
         w.remove(&addr);
-        println!("[TCP] Worker {} desregistrado. Total workers: {}", addr, w.len());
+        println!("[TCP] Worker {} desconectado y desregistrado.", addr);
     }
 }

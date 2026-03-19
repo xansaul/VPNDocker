@@ -43,7 +43,7 @@ async fn handle_worker(mut socket: TcpStream) -> Result<(), Box<dyn std::error::
         
         full_data.extend_from_slice(&buffer[..n]);
 
-        if let Ok(Message::SubmmitResult(result)) = serde_json::from_slice::<Message>(&full_data) {
+        if let Ok(Message::SubmitResult(result)) = serde_json::from_slice::<Message>(&full_data) {
             println!("¡Resultado recibido! Task ID: {}, Pixeles: {}", result.task_id, result.pixels.len());
             full_data.clear();
             break;

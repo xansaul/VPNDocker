@@ -7,7 +7,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let hub_addr_str  = env::var("HUB_ADDR").unwrap_or("127.0.0.1:7878".into());
+    let hub_addr_str = env::var("HUB_ADDR").unwrap_or("127.0.0.1:7878".into());
     let client_ip: Option<IpAddr> = env::var("CLIENT_IP")
         .ok()
         .and_then(|s| s.parse().ok());
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╚══════════════════════════════════════════╝\n");
 
     let mut stream = connect_with_retry(&hub_addr_str, client_ip).await?;
-    let local_addr  = stream.local_addr()?;
+    let local_addr = stream.local_addr()?;
     println!("[Worker {}] Conectado al hub.\n", local_addr);
 
     let mut full_data: Vec<u8> = Vec::new();
@@ -32,33 +32,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("[Worker {}] Hub cerró la conexión.", local_addr);
             break;
         }
+        
         full_data.extend_from_slice(&buffer[..n]);
 
-        match serde_json::from_slice::<Message>(&full_data) {
-            Ok(msg) => {
-                full_data.clear();
-                match msg {
-                    Message::AssignTask(task) => {
-                        handle_task_async(&mut stream, task, &local_addr.to_string()).await?;
+        let mut cursor = 0;
+        loop {
+            let slice = &full_data[cursor..];
+            if slice.is_empty() { break; }
+
+            let mut stream_deser = serde_json::Deserializer::from_slice(slice).into_iter::<Message>();
+
+            match stream_deser.next() {
+                Some(Ok(msg)) => {
+                    cursor += stream_deser.byte_offset();
+                    
+                    match msg {
+                        Message::AssignTask(task) => {
+                            if let Err(e) = handle_task_async(&mut stream, task, &local_addr.to_string()).await {
+                                eprintln!("[Worker {}] Error procesando tarea: {}", local_addr, e);
+                                return Err(e); 
+                            }
+                        }
+                        Message::Error(e) => {
+                            eprintln!("[Worker {}] Error crítico del hub: {}", local_addr, e);
+                            break;
+                        }
+                        _ => {}
                     }
-                    Message::Error(e) => {
-                        eprintln!("[Worker {}] Error del hub: {}", local_addr, e);
-                        break;
-                    }
-                    _ => {}
                 }
-            }
-            Err(e) if e.is_eof() => continue,
-            Err(e) => {
-                eprintln!("[Worker {}] Error deserializando: {}", local_addr, e);
-                full_data.clear();
+                Some(Err(e)) if e.is_eof() => {
+                    break;
+                }
+                Some(Err(e)) => {
+                    eprintln!("[Worker {}] Error de formato: {}. Saltando...", local_addr, e);
+                    cursor += 1; 
+                }
+                None => break,
             }
         }
+        
+        full_data.drain(..cursor);
     }
 
-    println!("[Worker {}] Terminando.", local_addr);
+    println!("[Worker {}] Terminando proceso.", local_addr);
     Ok(())
 }
+
 
 async fn handle_task_async(
     stream:    &mut TcpStream,
@@ -86,11 +105,12 @@ async fn handle_task_async(
         worker_id, task.id, start.elapsed().as_secs_f64(), pixels.len()
     );
 
-    let result = Message::SubmmitResult(TaskResult {
+    let result = Message::SubmitResult(TaskResult {
         task_id:   task.id,
         job_id:    task.job_id.clone(),
         worker_id: worker_id.to_string(),
         row_start: task.row_start,
+        row_end:   task.row_end,
         pixels,
     });
 
@@ -104,15 +124,19 @@ async fn handle_task_async(
 
 fn compute_mandelbrot(task: &MandelbrotTask) -> Vec<u32> {
     let mut results = Vec::with_capacity((task.row_end - task.row_start) * task.total_width);
+
     for py in task.row_start..task.row_end {
+        let cy = task.y_start + py as f64 * task.y_step;
+
         for px in 0..task.total_width {
-            let cx = task.x_start + (px as f64 / task.total_width  as f64) * (task.x_end - task.x_start);
-            let cy = task.y_start + (py as f64 / task.total_height as f64) * (task.y_end - task.y_start);
+            let cx = task.x_start + px as f64 * task.x_step;
             results.push(mandelbrot_iter(cx, cy, task.max_iter));
         }
     }
+
     results
 }
+
 
 #[inline(always)]
 fn mandelbrot_iter(cx: f64, cy: f64, max_iter: u32) -> u32 {
